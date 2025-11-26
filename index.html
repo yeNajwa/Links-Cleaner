@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TXT Link Cleaner</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    textarea { width: 100%; height: 200px; }
+    input, button { padding: 10px; margin: 10px 0; width: 100%; }
+    pre { background: #f4f4f4; padding: 10px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>TXT LINK CLEANER (Web Version)</h2>
+
+  <label>Select your TXT file:</label>
+  <input type="file" id="fileInput" accept=".txt" />
+
+  <label>Enter Series Name:</label>
+  <input type="text" id="seriesName" placeholder="Example: MySeries" />
+
+  <button onclick="convertFile()">Convert</button>
+
+  <h3>Output:</h3>
+  <pre id="output"></pre>
+
+  <button id="downloadBtn" style="display:none" onclick="downloadOutput()">Download TXT</button>
+
+  <script>
+    function convertFile() {
+      const file = document.getElementById('fileInput').files[0];
+      const series = document.getElementById('seriesName').value.trim();
+      if (!file) return alert('Please select a TXT file');
+      if (!series) return alert('Please enter series name');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/);
+
+        const qualityRegex = /-\s+(.+?)\s+-/;
+        const urlRegex = /(https?:\/\/[^\s]+)/;
+
+        const linksByQuality = {};
+        let currentQuality = null;
+
+        lines.forEach(line => {
+          const qMatch = line.match(qualityRegex);
+          if (qMatch) {
+            currentQuality = qMatch[1].trim().replace(/ /g, '.');
+            if (!linksByQuality[currentQuality]) linksByQuality[currentQuality] = [];
+            return;
+          }
+
+          const urlMatch = line.match(urlRegex);
+          if (urlMatch && currentQuality) {
+            linksByQuality[currentQuality].push(urlMatch[1]);
+          }
+        });
+
+        let output = '';
+        for (const quality in linksByQuality) {
+          output += `# ${quality}\n`;
+          linksByQuality[quality].forEach(url => {
+            output += url + "\n\n";
+          });
+        }
+
+        document.getElementById('output').textContent = output;
+        document.getElementById('downloadBtn').style.display = 'block';
+        window.cleanedText = output;
+      };
+
+      reader.readAsText(file);
+    }
+
+    function downloadOutput() {
+      const series = document.getElementById('seriesName').value.trim();
+      const blob = new Blob([window.cleanedText], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = series + '.txt';
+      link.click();
+    }
+  </script>
+</body>
+</html>
